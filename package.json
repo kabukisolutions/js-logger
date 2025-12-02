@@ -1,13 +1,14 @@
 {
   "name": "@akshat1/js-logger",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Simple JS logger.",
   "main": "lib/index.js",
   "type": "module",
   "scripts": {
+    "clean": "rm -rf lib docs",
     "build": "tsc",
-    "test": "node --test **/*.test.js",
-    "clean": "rm -rf lib",
+    "lint": "eslint .",
+    "test": "node --import tsx --test",
     "docs": "typedoc src"
   },
   "repository": {
@@ -15,7 +16,7 @@
     "url": "git+ssh://git@github.com/akshat1/js-logger.git"
   },
   "publishConfig": {
-    "registry": "https://warehouse.akshatmedia.com"
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "Logging",
@@ -28,12 +29,15 @@
     "url": "https://github.com/akshat1/js-logger/issues"
   },
   "homepage": "https://github.com/akshat1/js-logger#readme",
-  "dependencies": {
-    "chalk": "^5.4.1"
-  },
   "devDependencies": {
-    "@types/node": "^22.5.4",
+    "@eslint/js": "^9.39.1",
+    "@stylistic/eslint-plugin": "^5.6.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "jiti": "^2.6.1",
+    "tsx": "^4.21.0",
     "typedoc": "^0.26.7",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.48.0"
   }
 }

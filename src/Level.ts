@@ -14,10 +14,10 @@ export const enum Level {
  * Maps levels to the names of the console methods that will be called.
  */
 export const LevelName = {
-  [Level.OFF]: "OFF",
+  [Level.OFF]  : "OFF",
   [Level.ERROR]: "error",
-  [Level.WARN]: "warn",
-  [Level.INFO]: "info",
+  [Level.WARN] : "warn",
+  [Level.INFO] : "info",
   [Level.DEBUG]: "debug",
-  [Level.ALL]: "log",
+  [Level.ALL]  : "log",
 };
