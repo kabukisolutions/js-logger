@@ -1,56 +1,100 @@
-import { InnerLogger } from "./InnerLogger";
 import { Level, LevelName } from "./Level.js";
-import { Logger } from "./Logger";
-import { getInnerLogger as browserInnerLogger } from "./browser.js";
+import type { Logger } from "./Logger.js";
 
 let globalLevel: Level = Level.ALL;
 
 export {
-  Logger,
   Level,
   LevelName,
 };
+
+export type { Logger };
 export const getGlobalLevel = () => globalLevel;
 export const setGlobalLevel = (level: Level) => {
   globalLevel = level;
 };
 
-// We don't want to import the server logger in the browser, so we use dynamic imports
-// That's because we may want to use node APIs in the server logger in the future
-const getInnerLogger = typeof window === "undefined" ? (await import("./server.js")).getInnerLogger : browserInnerLogger;
+const formatMessage = (message: unknown): unknown => {
+  if (Array.isArray(message)) {
+    return message.map(formatMessage);
+  }
 
-const wrapInLevelLogic = (level: Level, getLevel: () => Level, innerLogger: InnerLogger) => {
-  const levelName = LevelName[level];
-  return (...args: unknown[]) => {
-    if (getLevel() >= level) {
-      innerLogger(levelName, ...args);
+  if (message instanceof Error) {
+    return {
+      name   : message.name,
+      message: message.message,
+      stack  : message.stack,
+    };
+  }
+
+  if (typeof message === "object" && message !== null) {
+    const keys = Object.keys(message).sort();
+    const formattedObj: Record<string, unknown> = {};
+    for (const key of keys) {
+      formattedObj[key] = formatMessage(message[key]);
     }
-  };
+    return formattedObj;
+  }
+
+  return message;
+};
+
+/**
+ * In production environments (such as AWS), we want a single log message per line. So we stringify into a single line.
+ * OTOH, in development environments, we want to see the raw message with newlines and pretty formatting.
+ * @returns
+ */
+const stringifyIfNeeded = (message: unknown): string => {
+  return JSON.stringify(message, null, process.env.NODE_ENV === "development" ? 2 : undefined);
+};
+
+export const getTimestamp = () => {
+  return new Date().toISOString();
 };
 
 export const getLogger = (loggerName: string, parent?: Logger): Logger => {
   const name = parent ? `${parent.getName()} > ${loggerName}` : loggerName;
   const getName = () => name;
-  let l: Logger = {} as Logger;
-  const innerLogger = getInnerLogger(l);
-  
-  let level: Level|undefined;
-  /* This might become problematic if we have a lot of nested loggers but that seems unlikely. If it ever does become a
-  problem, then we might need to have local levels, plus a way to update everything when the global level or a parent
-  level changes. We'll need a modified pub-sub thingy, but we'll use a WeakSet instead of an array of subscribers in
-  order to play well with garbage collection. */
-  const getLevel = () => level ? level : parent?.getLevel() ?? globalLevel;
+  const lineage = (parent ? [...parent.getLineage(), loggerName] : [loggerName]).join(" > ");
+  const l: Logger = {} as Logger;
+  let loggerLevel: Level | undefined;
+
+  const makeLogFn = (level: Level) => {
+    if (typeof window !== "undefined") {
+      if (process.env.NODE_ENV === "development") {
+        return (...messages: unknown[]) => {
+          if (level <= Math.min(globalLevel, loggerLevel ?? globalLevel)) {
+            console[LevelName[level]](`[${getTimestamp()} ${lineage}]`, ...messages);
+          }
+        };
+      }
+      return () => {};
+    }
+
+    return (...messages: unknown[]) => {
+      if (level <= Math.min(globalLevel, loggerLevel ?? globalLevel)) {
+        console[LevelName[level]](stringifyIfNeeded({
+          name      : lineage,
+          timestamp : getTimestamp(),
+          level     : LevelName[level],
+          logMessage: formatMessage(messages),
+        }));
+      }
+    };
+  };
 
   Object.assign(l, {
-    getLevel,
-    setLevel: (newLevel: Level) => { level = newLevel; },
-    info: wrapInLevelLogic(Level.INFO, getLevel, innerLogger),
-    error: wrapInLevelLogic(Level.ERROR, getLevel, innerLogger),
-    warn: wrapInLevelLogic(Level.WARN, getLevel, innerLogger),
-    debug: wrapInLevelLogic(Level.DEBUG, getLevel, innerLogger),
-    log: wrapInLevelLogic(Level.ALL, getLevel, innerLogger),
-    getName,
+    getLevel: () => loggerLevel ? loggerLevel : parent?.getLevel() ?? globalLevel,
+    setLevel: (newLevel: Level) => {
+      loggerLevel = newLevel;
+    },
+    info      : makeLogFn(Level.INFO),
+    error     : makeLogFn(Level.ERROR),
+    warn      : makeLogFn(Level.WARN),
+    debug     : makeLogFn(Level.DEBUG),
+    log       : makeLogFn(Level.ALL),
     getLineage: () => parent ? [...parent.getLineage(), loggerName] : [loggerName],
+    getName,
   });
 
   return l;

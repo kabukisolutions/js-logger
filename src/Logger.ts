@@ -11,6 +11,6 @@ export interface Logger {
   getLevel: () => number;
   setLevel: (level: number) => void;
   getName(): string;
-  /** An array containing names of this logger, and all it's ancestors. Of th form [grandmaLogger, daddyLogger, logger]*/
+  /** An array containing names of this logger, and all it's ancestors. Of the form [grandmaLogger, daddyLogger, logger]*/
   getLineage(): string[];
 }
