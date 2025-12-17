@@ -60,6 +60,16 @@ export const getTimestamp = () => {
   return new Date().toISOString();
 };
 
+const ColorMap: Record<Level, string> = {
+  [Level.OFF]  : "",
+  [Level.ERROR]: "\x1b[31m", // Red
+  [Level.WARN] : "\x1b[33m", // Yellow
+  [Level.INFO] : "\x1b[32m", // Green
+  [Level.DEBUG]: "\x1b[34m", // Blue
+  [Level.ALL]  : "\x1b[37m", // White
+};
+const ResetColor = "\x1b[0m";
+
 export const getLogger = (loggerName: string, parent?: Logger): Logger => {
   const name = parent ? `${parent.getName()} > ${loggerName}` : loggerName;
   const getName = () => name;
@@ -72,7 +82,7 @@ export const getLogger = (loggerName: string, parent?: Logger): Logger => {
       if (process.env.NODE_ENV === "development") {
         return (...messages: unknown[]) => {
           if (level <= Math.min(globalLevel, loggerLevel ?? globalLevel)) {
-            console[LevelName[level]](`[${getTimestamp()} ${lineage}]`, ...messages);
+            console[LevelName[level]](ColorMap[level], `[${getTimestamp()} ${lineage}]`, ResetColor, ...messages);
           }
         };
       }
