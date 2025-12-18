@@ -1,6 +1,6 @@
 {
   "name": "@akshat1/js-logger",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Simple JS logger.",
   "main": "lib/index.js",
   "type": "module",
@@ -8,7 +8,7 @@
     "clean": "rm -rf lib docs",
     "build": "tsc",
     "lint": "eslint .",
-    "test": "node --import tsx --test",
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
     "docs": "typedoc src"
   },
   "repository": {

@@ -1,5 +1,3 @@
-# https://github.com/marketplace/actions/github-action-for-yarn
-
 name: Run Tests
 
 on: [pull_request]

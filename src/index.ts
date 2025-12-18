@@ -1,5 +1,7 @@
+import { transformValue } from "./transform.js";
 import { Level, LevelName } from "./Level.js";
 import type { Logger } from "./Logger.js";
+import { ColorMap, ResetColor } from "./Colors.js";
 
 let globalLevel: Level = Level.ALL;
 
@@ -14,29 +16,36 @@ export const setGlobalLevel = (level: Level) => {
   globalLevel = level;
 };
 
-const formatMessage = (message: unknown): unknown => {
-  if (Array.isArray(message)) {
-    return message.map(formatMessage);
+export {
+  addTransformer,
+  removeTransformer,
+} from "./transform.js";
+
+const formatMessage = (message: unknown, seen: Set<unknown> | null = new Set<unknown>()): unknown => {
+  if (seen.has(message)) {
+    return "[Circular]";
+  }
+  seen.add(message);
+  // Give formatters a chance to transform the message.
+  // We do this in case somebody wants to handle a certain shape of an array, for instance.
+  const transformedMessage = transformValue(message);
+
+  // Now, do a recursive transformation of the message. We don't want transofmration functions (format functions; need to change the name)
+  // to worry about recursion and order of operations. Simplify it so that they only have to deal with the current value.
+  if (Array.isArray(transformedMessage)) {
+    return transformedMessage.map((message) => formatMessage(message, seen));
   }
 
-  if (message instanceof Error) {
-    return {
-      name   : message.name,
-      message: message.message,
-      stack  : message.stack,
-    };
-  }
-
-  if (typeof message === "object" && message !== null) {
-    const keys = Object.keys(message).sort();
+  if (typeof transformedMessage === "object" && transformedMessage !== null) {
+    const keys = Object.keys(transformedMessage).sort();
     const formattedObj: Record<string, unknown> = {};
     for (const key of keys) {
-      formattedObj[key] = formatMessage(message[key]);
+      formattedObj[key] = formatMessage(transformedMessage[key], seen);
     }
     return formattedObj;
   }
 
-  return message;
+  return transformedMessage;
 };
 
 /**
@@ -64,7 +73,7 @@ export const getLogger = (loggerName: string, parent?: Logger): Logger => {
       if (process.env.NODE_ENV === "development") {
         return (...messages: unknown[]) => {
           if (level <= Math.min(globalLevel, loggerLevel ?? globalLevel)) {
-            console[LevelName[level]](`[${getTimestamp()} ${lineage}]`, ...messages);
+            console[LevelName[level]](ColorMap[level], `[${getTimestamp()} ${lineage}]`, ResetColor, ...messages);
           }
         };
       }
@@ -73,12 +82,12 @@ export const getLogger = (loggerName: string, parent?: Logger): Logger => {
 
     return (...messages: unknown[]) => {
       if (level <= Math.min(globalLevel, loggerLevel ?? globalLevel)) {
-        console[LevelName[level]](stringifyIfNeeded({
+        console[LevelName[level]](ColorMap[level], stringifyIfNeeded({
           name      : lineage,
           timestamp : getTimestamp(),
           level     : LevelName[level],
           logMessage: formatMessage(messages),
-        }));
+        }), ResetColor);
       }
     };
   };
