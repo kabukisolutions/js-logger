@@ -30,7 +30,7 @@ describe ("getLogger", () => {
     logger.setLevel(Level.ERROR);
     logger.error("test message");
     /// @ts-expect-error - we have mocked console.error
-    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[0]), {
+    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[1]), {
       name      : "parent > test",
       timestamp : Now.toISOString(),
       level     : "error",
@@ -50,7 +50,7 @@ describe ("getLogger", () => {
     setGlobalLevel(Level.ERROR);
     logger.error("test message");
     /// @ts-expect-error - we have mocked console.error
-    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[0]), {
+    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[1]), {
       name      : "parent > test",
       timestamp : Now.toISOString(),
       level     : "error",
@@ -70,7 +70,7 @@ describe ("getLogger", () => {
     const error = new Error("test message");
     logger.error(error);
     /// @ts-expect-error - we have mocked console.error
-    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[0]), {
+    assert.deepStrictEqual(JSON.parse(console.error.mock.calls[0].arguments[1]), {
       name      : "parent > test",
       timestamp : Now.toISOString(),
       level     : "error",
@@ -93,7 +93,7 @@ describe ("getLogger", () => {
     logger.error(selfReferentialObj);
 
     /// @ts-expect-error - we have mocked console.error
-    const loggedOutput = JSON.parse(console.error.mock.calls[0].arguments[0]);
+    const loggedOutput = JSON.parse(console.error.mock.calls[0].arguments[1]);
     assert.strictEqual(loggedOutput.name, "test");
     assert.strictEqual(loggedOutput.level, "error");
     // The logMessage should contain the object with circular reference replaced by "[Circular]"
