@@ -4,7 +4,7 @@ A simple JS Logger.
 ## Installation
 
 ```sh
-npm i -S @akshat1/js-logger
+npm i -S @kabukisolutions/js-logger
 ```
 
 ## Introduction and usage
