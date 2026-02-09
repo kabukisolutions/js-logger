@@ -21,26 +21,25 @@ export {
   removeTransformer,
 } from "./transform.js";
 
-const formatMessage = (message: unknown, seen: Set<unknown> | null = new Set<unknown>()): unknown => {
-  if (seen.has(message)) {
-    return "[Circular]";
-  }
-  seen.add(message);
+const formatMessage = (message: unknown, path: Set<unknown> | null = new Set<unknown>()): unknown => {
   // Give formatters a chance to transform the message.
-  // We do this in case somebody wants to handle a certain shape of an array, for instance.
   const transformedMessage = transformValue(message);
 
-  // Now, do a recursive transformation of the message. We don't want transofmration functions (format functions; need to change the name)
-  // to worry about recursion and order of operations. Simplify it so that they only have to deal with the current value.
-  if (Array.isArray(transformedMessage)) {
-    return transformedMessage.map((message) => formatMessage(message, seen));
-  }
-
+  // Only objects can create cycles. Treat as circular only if this object is already an ancestor (own descendant).
   if (typeof transformedMessage === "object" && transformedMessage !== null) {
+    if (path.has(transformedMessage)) {
+      return "[Circular]";
+    }
+    const nextPath = new Set(path);
+    nextPath.add(transformedMessage);
+
+    if (Array.isArray(transformedMessage)) {
+      return transformedMessage.map((item) => formatMessage(item, nextPath));
+    }
     const keys = Object.keys(transformedMessage).sort();
     const formattedObj: Record<string, unknown> = {};
     for (const key of keys) {
-      formattedObj[key] = formatMessage(transformedMessage[key], seen);
+      formattedObj[key] = formatMessage(transformedMessage[key], nextPath);
     }
     return formattedObj;
   }
