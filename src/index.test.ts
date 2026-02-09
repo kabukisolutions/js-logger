@@ -104,4 +104,53 @@ describe ("getLogger", () => {
       self: "[Circular]",
     });
   });
+
+  it("should only not eliminate strings, considering them as circular references", (ctx) => {
+    const logger = getLogger("test");
+    ctx.mock.method(console, "error");
+    const data = [
+      {
+        "link"       : "https://www.opindia.com/",
+        "title"      : "OpIndia",
+        "description": "bringing the 'right' side of India",
+        "favicon"    : "https://i0.wp.com/www.opindia.com/wp-content/uploads/2018/10/cropped-opindia-logo-1.png?fit=32%2C32&ssl=1",
+        "ogImage"    : "https://i0.wp.com/www.opindia.com/wp-content/uploads/2018/10/cropped-opindia-logo-1.png?fit=32%2C32&ssl=1",
+      },
+      {
+        "link"       : "https://www.opindia.com/blog/",
+        "title"      : "OpIndia.com",
+        "description": "bringing the 'right' side of India",
+        "favicon"    : "https://i0.wp.com/www.opindia.com/wp-content/uploads/2018/10/cropped-opindia-logo-1.png?fit=32%2C32&ssl=1",
+        "ogImage"    : "https://i0.wp.com/www.opindia.com/wp-content/uploads/2018/10/cropped-opindia-logo-1.png?fit=32%2C32&ssl=1",
+      },
+    ];
+    logger.error(data);
+    /// @ts-expect-error - we have mocked console.error
+    const loggedOutput = JSON.parse(console.error.mock.calls[0].arguments[1]);
+    assert.strictEqual(loggedOutput.level, "error");
+    assert.ok(Array.isArray(loggedOutput.logMessage));
+    // Logger receives messages as [data], so logMessage is formatMessage([data]) === [data] (no false circular replacement)
+    assert.deepStrictEqual(loggedOutput.logMessage, [data]);
+  });
+
+  it("should not consider duplicate siblings as circular references", (ctx) => {
+    const logger = getLogger("test");
+    ctx.mock.method(console, "error");
+    const sampleObj = {
+      "bar": "baz",
+    };
+
+    const data = {
+      "foo": sampleObj,
+      "bar": sampleObj,
+      "baz": {
+        "qux": sampleObj,
+      },
+    };
+    logger.error(data);
+    /// @ts-expect-error - we have mocked console.error
+    const loggedOutput = JSON.parse(console.error.mock.calls[0].arguments[1]);
+    assert.strictEqual(loggedOutput.level, "error");
+    assert.deepStrictEqual(loggedOutput.logMessage, [data]);
+  });
 });
