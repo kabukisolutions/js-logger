@@ -8,14 +8,26 @@
  */
 export type Transformer = (message: unknown, next?: Transformer) => unknown;
 
+/**
+ * Transform incoming Error objects into plain objects that contain all the properties of the Error object, including
+ * the non-enumerable ones. All other types pass through unchanged.
+ *
+ * @param message - The message to transform. This may or may not be an Error object.
+ * @param next - The next transformer in the chain. Optional.
+ * @returns The transformed message.
+ */
 const transformAnError: Transformer = (message: unknown, next?: Transformer) => {
   if (message instanceof Error) {
-    return {
-      name   : message.name,
-      message: message.message,
-      stack  : message.stack,
+    const errLike = message as Record<string, unknown> & Partial<Pick<Error, "stack" | "name" | "message">>;
+    const transformed = {
+      ...errLike,
+      stack  : errLike.stack,
+      name   : errLike.name,
+      message: errLike.message,
     };
+    return next ? next(transformed) : transformed;
   }
+
   return next ? next(message) : message;
 };
 
